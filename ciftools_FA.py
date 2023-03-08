@@ -31,10 +31,8 @@ def label_df(dlabel_file):
     Generate a Pandas DataFrame with labels and color information
         dlabel_file: reference cifti2.dlabel file
     '''
-    labels = np.unique(dlabel_file.get_fdata()).astype('int32')
-    label_tbl = pd.DataFrame(dlabel_file.header.get_axis(0).get_element(0)[1].values(),columns=('name','rgba')).reset_index(drop=True)
-    label_tbl['label'] = labels
-    label_tbl = label_tbl[['label', 'name', 'rgba']]
+    parc_dict = dlabel_file.header.get_axis(0).get_element(0)[1]
+    label_tbl = pd.DataFrame([[parc, parc_dict[parc][0], parc_dict[parc][1]] for parc in parc_dict], columns=['label', 'name', 'rgba'])
     
     del dlabel_file
     return label_tbl
