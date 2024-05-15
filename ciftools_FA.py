@@ -67,17 +67,22 @@ def agg_labels(cifti, labels, func='mean'):
     
     lbls = np.hstack([labels.get_fdata()[:,lbl_os_L:lbl_os_L+lbl_n_L],
                       labels.get_fdata()[:,lbl_os_R:lbl_os_R+lbl_n_R]])
-    shared_vv = np.hstack([np.isin(lbl_vv_L, dt_vv_L), np.isin(lbl_vv_R, dt_vv_R)])
+    shared_vv_lbl = np.hstack([np.isin(lbl_vv_L, dt_vv_L), np.isin(lbl_vv_R, dt_vv_R)])
+    shared_vv_dt = np.hstack([np.isin(dt_vv_L, lbl_vv_L, ), np.isin(dt_vv_R, lbl_vv_R)])
     
-    lbls = lbls[:, shared_vv]
+    lbls = lbls[:, shared_vv_lbl]
     scals = np.hstack([cifti.get_fdata()[:,lbl_os_L:lbl_os_L+lbl_n_L],
-                       cifti.get_fdata()[:,lbl_os_R:lbl_os_R+lbl_n_R]])    
+                       cifti.get_fdata()[:,lbl_os_R:lbl_os_R+lbl_n_R]])[:, shared_vv_dt]
+    
     
     # merge
+    print(lbls)
     df = np.vstack([lbls, scals]).T
     names = np.hstack(['label', cifti.header.get_axis(0).name])
+    if len(names)!=df.shape[1]:
+        names = [f"Scalar {i}" for i in range(1,df.shape[1])]
+        names = np.hstack(['label', names])
     df = pd.DataFrame(df, columns=names).groupby('label').agg(func)
-    
         
     return df
 #.......................................................................................
@@ -114,10 +119,12 @@ def agg_networks(cifti, networks, func='mean', by_hemisphere=False, label_tbl=Fa
                         networks.get_fdata()[:,lbl_os_R:lbl_os_R+lbl_n_R]])
     labels = labels[:, shared_vv]
     labels_tbl = label_df(networks)
+    
+    
     if by_hemisphere:
-        labels_tbl.name[1:] = labels_tbl[1:].name.apply(lambda x: '_'.join(x.split('_')[1:3]))
+        labels_tbl.loc[1:,'name'] = labels_tbl.loc[1:, 'name'].apply(lambda x: '_'.join(x.split('_')[1:3]))
     else:
-        labels_tbl.name[1:] = labels_tbl[1:].name.apply(lambda x: x.split('_')[2])
+        labels_tbl.loc[1:,'name']= labels_tbl.loc[1:,'name'].apply(lambda x: x.split('_')[2])
     
     labels_tbl.set_index('name', inplace=True)
     labels_tbl['network'] = labels_tbl['label'].groupby(level='name').transform('min')
